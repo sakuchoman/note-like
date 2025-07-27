@@ -17,25 +17,8 @@ st.set_page_config(
 st.title("📰 Note有料記事検索ツール")
 st.markdown("note上の有料記事を「いいね数」順で検索します")
 
-# フィルタープリセット定義
-FILTER_PRESETS = {
-    "ゆるめ": {
-        "exclude_words": ["稼ぐ", "稼げる", "副業で月収", "収益化"],
-        "price_max": None
-    },
-    "標準": {
-        "exclude_words": ["稼", "副業", "収益", "ビジネス", "マネタイズ", "集客"],
-        "price_max": 5000
-    },
-    "厳しめ": {
-        "exclude_words": ["稼", "副業", "ビジネス", "収益", "集客", "マーケ", "売上", "コンサル", "セミナー"],
-        "price_max": 3000
-    },
-    "カスタム": {
-        "exclude_words": [],
-        "price_max": None
-    }
-}
+# デフォルトの除外ワード例
+DEFAULT_EXCLUDE_WORDS = "稼ぐ,副業,収益,ビジネス,マネタイズ,集客"
 
 # サイドバー
 with st.sidebar:
@@ -54,24 +37,12 @@ with st.sidebar:
     )
 
 # メインコンテンツ
-col1, col2 = st.columns([2, 1])
-
-with col1:
-    # 検索キーワード入力
-    search_query = st.text_input(
-        "検索キーワード",
-        placeholder="例: エッセイ、写真、小説",
-        help="検索したいキーワードを入力してください"
-    )
-
-with col2:
-    # フィルタープリセット選択
-    filter_preset = st.radio(
-        "フィルタープリセット",
-        options=list(FILTER_PRESETS.keys()),
-        index=1,  # デフォルトは「標準」
-        horizontal=True
-    )
+# 検索キーワード入力
+search_query = st.text_input(
+    "🔍 検索キーワード",
+    placeholder="例: エッセイ、写真、小説、料理、旅行",
+    help="検索したいキーワードを入力してください"
+)
 
 # 詳細設定
 with st.expander("詳細設定"):
@@ -97,41 +68,28 @@ with st.expander("詳細設定"):
         price_max = st.number_input(
             "価格上限（円）",
             min_value=0,
-            value=FILTER_PRESETS[filter_preset]["price_max"] or 10000,
+            value=5000,
             step=100,
             help="0の場合は無制限"
         )
-        
-    # 除外ワード設定
-    st.subheader("🚫 除外ワード設定")
-    
-    # プリセットの除外ワードを表示
-    if filter_preset != "カスタム":
-        preset_words = FILTER_PRESETS[filter_preset]["exclude_words"]
-        st.info(f"プリセット除外ワード: {', '.join(preset_words)}")
-    
-    # 追加除外ワード（すべてのプリセットで使用可能）
-    additional_exclude = st.text_area(
-        "追加の除外ワード（カンマ区切り）",
-        placeholder="講座,教材,手法,アフィリエイト",
-        help="プリセットに加えて除外したいワードを入力してください"
-    )
-    
-    # 除外ワードの統合
-    if filter_preset == "カスタム":
-        # カスタムの場合は追加除外ワードのみ使用
-        exclude_words = [w.strip() for w in additional_exclude.split(",") if w.strip()]
-    else:
-        # プリセット + 追加除外ワード
-        preset_words = FILTER_PRESETS[filter_preset]["exclude_words"]
-        additional_words = [w.strip() for w in additional_exclude.split(",") if w.strip()]
-        exclude_words = preset_words + additional_words
-    
-    # 最終的な除外ワードを表示
-    if exclude_words:
-        st.success(f"✅ 適用される除外ワード: {', '.join(exclude_words)}")
-    else:
-        st.warning("⚠️ 除外ワードが設定されていません")
+
+# 除外ワード設定
+st.subheader("🚫 除外ワード設定")
+exclude_words_input = st.text_area(
+    "除外ワード（カンマ区切り）",
+    value=DEFAULT_EXCLUDE_WORDS,
+    placeholder="稼ぐ,副業,収益,ビジネス,マネタイズ,集客",
+    help="除外したいワードをカンマで区切って入力してください"
+)
+
+# 除外ワードのリスト化
+exclude_words = [w.strip() for w in exclude_words_input.split(",") if w.strip()]
+
+# 適用される除外ワードを表示
+if exclude_words:
+    st.info(f"💡 適用される除外ワード: {', '.join(exclude_words)}")
+else:
+    st.warning("⚠️ 除外ワードが設定されていません")
 
 # 検索実行ボタン
 if st.button("🔍 検索実行", type="primary", use_container_width=True):
@@ -244,9 +202,9 @@ if st.button("🔍 検索実行", type="primary", use_container_width=True):
                         mime="text/csv"
                     )
                     
-                    # テーブル表示
+                    # テーブル表示（URLリンク付き）
                     st.dataframe(
-                        df[["likes", "price", "title", "author_urlname", "publish_at"]],
+                        df[["likes", "price", "title", "author_urlname", "publish_at", "url"]],
                         use_container_width=True,
                         hide_index=True,
                         column_config={
@@ -254,7 +212,8 @@ if st.button("🔍 検索実行", type="primary", use_container_width=True):
                             "price": st.column_config.NumberColumn("価格", format="¥%d"),
                             "title": st.column_config.TextColumn("タイトル"),
                             "author_urlname": st.column_config.TextColumn("著者"),
-                            "publish_at": st.column_config.TextColumn("公開日")
+                            "publish_at": st.column_config.TextColumn("公開日"),
+                            "url": st.column_config.LinkColumn("リンク", display_text="記事を読む")
                         }
                     )
             else:
@@ -278,11 +237,10 @@ with col_guide1:
     - 探したいジャンルを入力してください
     - 例：「エッセイ」「写真」「小説」「料理」「旅行」など
     
-    **Step 2: フィルターを選択**
-    - **ゆるめ**：明らかなビジネス系のみ除外
-    - **標準**：一般的なビジネス関連を除外（推奨）
-    - **厳しめ**：創作系に特化した除外
-    - **カスタム**：自分で除外ワードを設定
+    **Step 2: 除外ワードを設定**
+    - デフォルトで一般的なビジネス系ワードが設定済み
+    - 必要に応じて追加・削除・変更が可能
+    - カンマ区切りで複数のワードを指定
     
     **Step 3: 検索実行**
     - 🔍ボタンをクリックして検索開始
@@ -309,9 +267,9 @@ with col_guide2:
     - 人気度でフィルタリング
     - 例：100いいね以上の記事のみ表示
     
-    **追加除外ワード**
-    - 全てのプリセットで利用可能
-    - プリセットに加えて独自の除外ワードを追加
+    **除外ワード**
+    - デフォルトでビジネス系ワードが設定済み
+    - 自由に編集・追加・削除が可能
     - カンマ区切りで複数指定可能
     - 例：「講座,教材,手法,アフィリエイト」
     """)
@@ -325,7 +283,7 @@ with example_col1:
     st.markdown("""
     **📝 エッセイを探す場合**
     - キーワード：「エッセイ」
-    - フィルター：「標準」
+    - 除外ワード：デフォルト + 「講座,教材」
     - 取得ページ数：10
     - 価格上限：3000円
     
@@ -336,7 +294,7 @@ with example_col2:
     st.markdown("""
     **📸 写真・画像系を探す場合**
     - キーワード：「写真」「イラスト」
-    - フィルター：「厳しめ」
+    - 除外ワード：デフォルト + 「教室,スクール」
     - 最低いいね数：50
     
     → クリエイティブな作品に特化して検索
@@ -346,8 +304,8 @@ with example_col3:
     st.markdown("""
     **📚 小説・創作を探す場合**
     - キーワード：「小説」「創作」
-    - フィルター：「厳しめ」
-    - 追加除外：「講座,教材,手法」
+    - 除外ワード：デフォルト + 「講座,教材,手法」
+    - 価格上限：2000円
     
     → 純粋な創作作品のみを抽出
     """)
@@ -356,15 +314,16 @@ with example_col3:
 st.subheader("⚠️ 使用時の注意とコツ")
 st.markdown("""
 **🔄 効率的な検索のコツ**
-- まずは「標準」フィルターで試してみる
+- まずはデフォルトの除外ワードで試してみる
 - キーワードは具体的すぎず、広すぎず
 - 結果が多すぎる場合は価格上限や最低いいね数で絞り込む
-- 結果が少ない場合は「ゆるめ」フィルターを試す
+- 結果が少ない場合は除外ワードを減らしてみる
 
 **📊 結果の見方**
 - 「いいね」数が多い記事ほど読者の評価が高い
 - 「価格」と「いいね」のバランスを見てコスパを判断
-- 「著者」をクリックして他の作品もチェック可能
+- 「リンク」列から直接記事を読むことが可能
+- CSVにもURLが含まれるため、後で参照しやすい
 
 **⏰ 検索時間について**
 - 1ページあたり約1秒の間隔で取得（API制限のため）
@@ -380,7 +339,7 @@ with trouble_col1:
     st.markdown("""
     **Q: 検索結果が0件になる**
     - キーワードを変更してみる
-    - フィルターを「ゆるめ」に変更
+    - 除外ワードを減らしてみる
     - 価格上限を上げる、または0にする
     - 最低いいね数を下げる
     """)
