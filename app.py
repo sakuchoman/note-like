@@ -102,17 +102,36 @@ with st.expander("詳細設定"):
             help="0の場合は無制限"
         )
         
-    # カスタム除外ワード
+    # 除外ワード設定
+    st.subheader("🚫 除外ワード設定")
+    
+    # プリセットの除外ワードを表示
+    if filter_preset != "カスタム":
+        preset_words = FILTER_PRESETS[filter_preset]["exclude_words"]
+        st.info(f"プリセット除外ワード: {', '.join(preset_words)}")
+    
+    # 追加除外ワード（すべてのプリセットで使用可能）
+    additional_exclude = st.text_area(
+        "追加の除外ワード（カンマ区切り）",
+        placeholder="講座,教材,手法,アフィリエイト",
+        help="プリセットに加えて除外したいワードを入力してください"
+    )
+    
+    # 除外ワードの統合
     if filter_preset == "カスタム":
-        custom_exclude = st.text_area(
-            "除外ワード（カンマ区切り）",
-            placeholder="稼ぐ,副業,ビジネス",
-            help="除外したいワードをカンマで区切って入力"
-        )
-        exclude_words = [w.strip() for w in custom_exclude.split(",") if w.strip()]
+        # カスタムの場合は追加除外ワードのみ使用
+        exclude_words = [w.strip() for w in additional_exclude.split(",") if w.strip()]
     else:
-        exclude_words = FILTER_PRESETS[filter_preset]["exclude_words"]
-        st.info(f"除外ワード: {', '.join(exclude_words)}")
+        # プリセット + 追加除外ワード
+        preset_words = FILTER_PRESETS[filter_preset]["exclude_words"]
+        additional_words = [w.strip() for w in additional_exclude.split(",") if w.strip()]
+        exclude_words = preset_words + additional_words
+    
+    # 最終的な除外ワードを表示
+    if exclude_words:
+        st.success(f"✅ 適用される除外ワード: {', '.join(exclude_words)}")
+    else:
+        st.warning("⚠️ 除外ワードが設定されていません")
 
 # 検索実行ボタン
 if st.button("🔍 検索実行", type="primary", use_container_width=True):
@@ -290,10 +309,11 @@ with col_guide2:
     - 人気度でフィルタリング
     - 例：100いいね以上の記事のみ表示
     
-    **カスタム除外ワード**
-    - 「カスタム」選択時に利用可能
+    **追加除外ワード**
+    - 全てのプリセットで利用可能
+    - プリセットに加えて独自の除外ワードを追加
     - カンマ区切りで複数指定可能
-    - 例：「アフィ,宣伝,広告,セール」
+    - 例：「講座,教材,手法,アフィリエイト」
     """)
 
 # 具体的な使用例
@@ -327,7 +347,7 @@ with example_col3:
     **📚 小説・創作を探す場合**
     - キーワード：「小説」「創作」
     - フィルター：「厳しめ」
-    - カスタム除外：「講座,教材,手法」
+    - 追加除外：「講座,教材,手法」
     
     → 純粋な創作作品のみを抽出
     """)
