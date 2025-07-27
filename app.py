@@ -154,40 +154,44 @@ if st.button("🔍 検索実行", type="primary", use_container_width=True):
                     
                     # 有料記事のフィルタリング
                     for article in articles:
-                        price = article.get("price", 0)
-                        if price > 0:  # 有料記事のみ
-                            # 除外ワードチェック
-                            title = article.get("name", "")
-                            description = article.get("description", "")
-                            text_to_check = (title + " " + description).lower()
-                            
-                            excluded = False
-                            for word in exclude_words:
-                                if word.lower() in text_to_check:
-                                    excluded = True
-                                    break
-                            
-                            if not excluded:
-                                # 追加フィルター
-                                like_count = article.get("like_count", 0)
+                        try:
+                            price = article.get("price", 0)
+                            if price > 0:  # 有料記事のみ
+                                # 除外ワードチェック（Noneを空文字列に変換）
+                                title = str(article.get("name", "") or "")
+                                description = str(article.get("description", "") or "")
+                                text_to_check = f"{title} {description}".lower()
                                 
-                                if like_count >= min_likes:
-                                    if price_max == 0 or price <= price_max:
-                                        # URLの構築（Noneチェック付き）
-                                        user_data = article.get("user", {})
-                                        urlname = user_data.get("urlname", "") if user_data else ""
-                                        key = article.get("key", "")
-                                        
-                                        if urlname and key:  # URLに必要な情報がある場合のみ追加
-                                            all_articles.append({
-                                                "likes": like_count,
-                                                "price": price,
-                                                "title": title,
-                                                "url": f"https://note.com/{urlname}/n/{key}",
-                                                "author_urlname": urlname,
-                                                "publish_at": article.get("publish_at", ""),
-                                                "description_short": description[:100] if description else ""
-                                            })
+                                excluded = False
+                                for word in exclude_words:
+                                    if word and word.lower() in text_to_check:
+                                        excluded = True
+                                        break
+                                
+                                if not excluded:
+                                    # 追加フィルター
+                                    like_count = article.get("like_count", 0)
+                                    
+                                    if like_count >= min_likes:
+                                        if price_max == 0 or price <= price_max:
+                                            # URLの構築（Noneチェック付き）
+                                            user_data = article.get("user", {})
+                                            urlname = user_data.get("urlname", "") if user_data else ""
+                                            key = article.get("key", "")
+                                            
+                                            if urlname and key:  # URLに必要な情報がある場合のみ追加
+                                                all_articles.append({
+                                                    "likes": like_count,
+                                                    "price": price,
+                                                    "title": title,
+                                                    "url": f"https://note.com/{urlname}/n/{key}",
+                                                    "author_urlname": urlname,
+                                                    "publish_at": str(article.get("publish_at", "") or ""),
+                                                    "description_short": description[:100] if description else ""
+                                                })
+                        except Exception as e:
+                            # 個別の記事でエラーが発生してもスキップして続行
+                            continue
                 
                 else:
                     st.warning(f"ページ {page + 1} の取得に失敗しました: {response.status_code}")
