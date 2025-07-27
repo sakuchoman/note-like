@@ -173,15 +173,21 @@ if st.button("🔍 検索実行", type="primary", use_container_width=True):
                                 
                                 if like_count >= min_likes:
                                     if price_max == 0 or price <= price_max:
-                                        all_articles.append({
-                                            "likes": like_count,
-                                            "price": price,
-                                            "title": title,
-                                            "url": f"https://note.com/{article.get('user', {}).get('urlname', '')}/n/{article.get('key', '')}",
-                                            "author_urlname": article.get("user", {}).get("urlname", ""),
-                                            "publish_at": article.get("publish_at", ""),
-                                            "description_short": description[:100] if description else ""
-                                        })
+                                        # URLの構築（Noneチェック付き）
+                                        user_data = article.get("user", {})
+                                        urlname = user_data.get("urlname", "") if user_data else ""
+                                        key = article.get("key", "")
+                                        
+                                        if urlname and key:  # URLに必要な情報がある場合のみ追加
+                                            all_articles.append({
+                                                "likes": like_count,
+                                                "price": price,
+                                                "title": title,
+                                                "url": f"https://note.com/{urlname}/n/{key}",
+                                                "author_urlname": urlname,
+                                                "publish_at": article.get("publish_at", ""),
+                                                "description_short": description[:100] if description else ""
+                                            })
                 
                 else:
                     st.warning(f"ページ {page + 1} の取得に失敗しました: {response.status_code}")
