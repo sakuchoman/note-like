@@ -14,10 +14,13 @@ This is a web scraping tool for collecting paid articles from note.com, sorted b
 - Response structure: `data.notes.contents` (array of articles)
 
 ### Core Features
-1. **Search & Filter**: Search articles by keyword, filter paid articles only (price > 0)
-2. **Exclusion**: Exclude articles containing specific words in title/description
-3. **Sorting**: Sort by like_count (DESC), then publish_at (DESC)
-4. **Output**: CSV format with columns: likes, price, title, url, author_urlname, publish_at, description_short
+1. **Search Operators**: Support for AND, OR, NOT, and complex search queries
+2. **Search Modes**: 5 search modes - Normal, AND, OR, NOT, Custom
+3. **Search & Filter**: Search articles by keyword, filter paid articles only (price > 0)
+4. **Dynamic UI**: Input forms change based on selected search mode
+5. **Query Preview**: Real-time display of actual API query
+6. **Sorting**: Sort by like_count (DESC), then publish_at (DESC)
+7. **Output**: CSV format with URL column and clickable links in UI
 
 ## Development Commands
 
@@ -47,7 +50,9 @@ note-like/
 ├── README.md                    # Project documentation
 ├── document/                    # Project specifications
 │   ├── note_paid_articles_collection_spec.md
-│   └── streamlit_implementation_plan.md
+│   ├── note_paid_articles_collection_spec_v2.md
+│   ├── streamlit_implementation_plan.md
+│   └── streamlit_implementation_plan_v2.md
 └── .streamlit/                  # Streamlit configuration (optional)
     └── config.toml
 ```
@@ -67,9 +72,10 @@ note-like/
 
 ### Data Processing
 1. Filter articles where `price > 0`
-2. Exclude articles containing any exclude_words (case-insensitive)
+2. Process search operators at API level (AND, OR, NOT)
 3. Sort by `like_count` DESC, then `publish_at` DESC
-4. Truncate descriptions to 100 characters, remove HTML/newlines
+4. Build article URLs and add clickable links
+5. Truncate descriptions to 100 characters, remove HTML/newlines
 
 ### Compliance Notes
 - This tool uses unofficial APIs - structure may change without notice
@@ -77,30 +83,50 @@ note-like/
 - For personal research use only - do not redistribute collected data
 - Implement graceful degradation for API changes
 
-## Configuration (config/app.yaml)
-```yaml
-query: "エッセイ"
-exclude_words: ["稼", "副業", "アフィ", "収益", "ビジネス"]
-size: 20
-pages: 10
-min_likes: 0
-price_max: null
-date_from: null
-date_to: null
-sleep_ms_min: 800
-sleep_ms_max: 1200
-retries: 3
-backoff_base_ms: 800
-output_dir: "outputs"
-cache_enabled: true
-cache_dir: "cache"
-log_dir: "logs"
+## Search Operators
+
+### Supported Operators
+- `AND` (case-insensitive): All conditions must be satisfied
+- `OR` (case-insensitive): Any condition must be satisfied
+- `NOT` (case-insensitive): Exclude specific conditions
+- `()` (parentheses): Control operator precedence
+
+### Search Mode Examples
+```python
+# Normal search
+query = "エッセイ"
+
+# AND search
+query = "エッセイ AND 旅行"
+
+# OR search
+query = "エッセイ OR 日記 OR 随筆"
+
+# NOT search
+query = "エッセイ NOT ビジネス NOT 稼ぐ"
+
+# Custom search
+query = "(エッセイ OR 日記) AND 旅行 NOT ビジネス"
+```
+
+## Configuration Constants
+```python
+COMMON_EXCLUDE_WORDS = "稼ぐ,副業,収益,ビジネス,マネタイズ,集客"
+RATE_LIMIT_MIN = 800  # ms
+RATE_LIMIT_MAX = 1200  # ms
+MAX_PAGES = 20
+ITEMS_PER_PAGE = 20
+MAX_RETRIES = 3
 ```
 
 ## Testing Checklist
+- [ ] All search modes (Normal/AND/OR/NOT/Custom) working correctly
+- [ ] Search query preview displays correct API query
 - [ ] CSV output contains only paid articles (price > 0)
-- [ ] Excluded words filter working correctly
+- [ ] CSV output includes URL column
+- [ ] Clickable links work in UI table
 - [ ] Articles sorted by likes (descending)
 - [ ] Rate limiting working (800-1200ms delays)
 - [ ] Error handling and retries working
-- [ ] Cache functionality (if enabled)
+- [ ] Search operator validation and error messages
+- [ ] Dynamic UI changes based on search mode selection
