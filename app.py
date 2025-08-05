@@ -17,8 +17,8 @@ st.set_page_config(
 st.title("📰 Note有料記事検索ツール")
 st.markdown("note上の有料記事を「いいね数」順で検索します")
 
-# デフォルトの除外ワード例
-DEFAULT_EXCLUDE_WORDS = "稼ぐ,副業,収益,ビジネス,マネタイズ,集客"
+# よく使われる除外ワードの例（NOT検索で使用）
+COMMON_EXCLUDE_WORDS = "稼ぐ,副業,収益,ビジネス,マネタイズ,集客"
 
 # サイドバー
 with st.sidebar:
@@ -84,8 +84,10 @@ elif search_mode == "OR検索":
     
 elif search_mode == "NOT検索（除外）":
     main_keyword = st.text_input("メインキーワード", placeholder="例: エッセイ")
+    st.info(f"💡 よく使われる除外ワード: {COMMON_EXCLUDE_WORDS}")
     exclude_keywords = st.text_input(
         "除外キーワード（カンマ区切り）",
+        value=COMMON_EXCLUDE_WORDS,
         placeholder="例: ビジネス, 稼ぐ, 副業",
         help="除外したいキーワードをカンマで区切って入力"
     )
@@ -150,30 +152,8 @@ with st.expander("詳細設定"):
             help="0の場合は無制限"
         )
 
-# 除外ワード設定
-# 通常検索の場合のみ、デフォルトの除外ワードを適用
-if search_mode == "通常検索":
-    st.subheader("🚫 除外ワード設定")
-    st.info("💡 ヒント: より高度な除外を行いたい場合は「NOT検索」モードをお使いください")
-    
-    exclude_words_input = st.text_area(
-        "除外ワード（カンマ区切り）",
-        value=DEFAULT_EXCLUDE_WORDS,
-        placeholder="稼ぐ,副業,収益,ビジネス,マネタイズ,集客",
-        help="タイトルや説明文から除外したいワードをカンマで区切って入力してください"
-    )
-    
-    # 除外ワードのリスト化
-    exclude_words = [w.strip() for w in exclude_words_input.split(",") if w.strip()]
-    
-    # 適用される除外ワードを表示
-    if exclude_words:
-        st.info(f"💡 適用される除外ワード: {', '.join(exclude_words)}")
-else:
-    # その他の検索モードでは除外ワードは使用しない
-    exclude_words = []
-    if search_mode in ["AND検索", "OR検索"]:
-        st.info("💡 除外したいワードがある場合は「NOT検索」モードまたは「カスタム検索」モードをご利用ください")
+# 除外ワードはすべてNOT検索モードで処理
+exclude_words = []
 
 # 検索実行ボタン
 if st.button("🔍 検索実行", type="primary", use_container_width=True):
@@ -242,38 +222,28 @@ if st.button("🔍 検索実行", type="primary", use_container_width=True):
                         try:
                             price = article.get("price", 0)
                             if price > 0:  # 有料記事のみ
-                                # 除外ワードチェック（Noneを空文字列に変換）
-                                title = str(article.get("name", "") or "")
-                                description = str(article.get("description", "") or "")
-                                text_to_check = f"{title} {description}".lower()
+                                # 追加フィルター
+                                like_count = article.get("like_count", 0)
                                 
-                                excluded = False
-                                for word in exclude_words:
-                                    if word and word.lower() in text_to_check:
-                                        excluded = True
-                                        break
-                                
-                                if not excluded:
-                                    # 追加フィルター
-                                    like_count = article.get("like_count", 0)
-                                    
-                                    if like_count >= min_likes:
-                                        if price_max == 0 or price <= price_max:
-                                            # URLの構築（Noneチェック付き）
-                                            user_data = article.get("user", {})
-                                            urlname = user_data.get("urlname", "") if user_data else ""
-                                            key = article.get("key", "")
-                                            
-                                            if urlname and key:  # URLに必要な情報がある場合のみ追加
-                                                all_articles.append({
-                                                    "likes": like_count,
-                                                    "price": price,
-                                                    "title": title,
-                                                    "url": f"https://note.com/{urlname}/n/{key}",
-                                                    "author_urlname": urlname,
-                                                    "publish_at": str(article.get("publish_at", "") or ""),
-                                                    "description_short": description[:100] if description else ""
-                                                })
+                                if like_count >= min_likes:
+                                    if price_max == 0 or price <= price_max:
+                                        # URLの構築（Noneチェック付き）
+                                        user_data = article.get("user", {})
+                                        urlname = user_data.get("urlname", "") if user_data else ""
+                                        key = article.get("key", "")
+                                        title = str(article.get("name", "") or "")
+                                        description = str(article.get("description", "") or "")
+                                        
+                                        if urlname and key:  # URLに必要な情報がある場合のみ追加
+                                            all_articles.append({
+                                                "likes": like_count,
+                                                "price": price,
+                                                "title": title,
+                                                "url": f"https://note.com/{urlname}/n/{key}",
+                                                "author_urlname": urlname,
+                                                "publish_at": str(article.get("publish_at", "") or ""),
+                                                "description_short": description[:100] if description else ""
+                                            })
                         except Exception as e:
                             # 個別の記事でエラーが発生してもスキップして続行
                             continue
