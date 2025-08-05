@@ -150,14 +150,17 @@ with st.expander("詳細設定"):
             help="0の場合は無制限"
         )
 
-# 除外ワード設定（NOT検索以外の場合のみ表示）
-if search_mode != "NOT検索（除外）":
-    st.subheader("🚫 追加の除外ワード設定")
+# 除外ワード設定
+# 通常検索の場合のみ、デフォルトの除外ワードを適用
+if search_mode == "通常検索":
+    st.subheader("🚫 除外ワード設定")
+    st.info("💡 ヒント: より高度な除外を行いたい場合は「NOT検索」モードをお使いください")
+    
     exclude_words_input = st.text_area(
         "除外ワード（カンマ区切り）",
-        value=DEFAULT_EXCLUDE_WORDS if search_mode == "通常検索" else "",
+        value=DEFAULT_EXCLUDE_WORDS,
         placeholder="稼ぐ,副業,収益,ビジネス,マネタイズ,集客",
-        help="タイトルや説明文から除外したいワードをカンマで区切って入力してください（取得後のフィルタリング）"
+        help="タイトルや説明文から除外したいワードをカンマで区切って入力してください"
     )
     
     # 除外ワードのリスト化
@@ -165,10 +168,12 @@ if search_mode != "NOT検索（除外）":
     
     # 適用される除外ワードを表示
     if exclude_words:
-        st.info(f"💡 取得後に適用される除外ワード: {', '.join(exclude_words)}")
+        st.info(f"💡 適用される除外ワード: {', '.join(exclude_words)}")
 else:
-    # NOT検索の場合は除外ワードは使用しない（APIで処理するため）
+    # その他の検索モードでは除外ワードは使用しない
     exclude_words = []
+    if search_mode in ["AND検索", "OR検索"]:
+        st.info("💡 除外したいワードがある場合は「NOT検索」モードまたは「カスタム検索」モードをご利用ください")
 
 # 検索実行ボタン
 if st.button("🔍 検索実行", type="primary", use_container_width=True):
